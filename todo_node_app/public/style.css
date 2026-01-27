@@ -1,0 +1,29 @@
+.filter-btn {
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: rgb(148, 163, 184);
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+}
+.filter-btn:hover {
+  border-color: rgba(148, 163, 184, 0.55);
+  color: rgb(226, 232, 240);
+}
+.filter-btn.active {
+  background: rgba(226, 232, 240, 0.9);
+  color: rgb(2, 6, 23);
+  border-color: transparent;
+}
+
+.todo-item {
+  display: grid;
+  grid-template-columns: 2.25rem 1fr auto;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  align-items: center;
+}
+
+.todo-text.completed {
+  text-decoration: line-through;
+  color: rgb(100, 116, 139);
+}

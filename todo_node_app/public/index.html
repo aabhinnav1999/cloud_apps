@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>To-Do</title>
+
+    <!-- Tailwind via CDN (simple setup) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body class="min-h-screen bg-slate-950 text-slate-100">
+    <main class="mx-auto max-w-2xl p-6">
+      <header class="mb-6">
+        <h1 class="text-3xl font-bold tracking-tight">To-Do</h1>
+        <p class="text-slate-400 mt-1">Simple, fast, persistent.</p>
+      </header>
+
+      <section class="rounded-2xl bg-slate-900/60 border border-slate-800 shadow-xl">
+        <div class="p-4 border-b border-slate-800">
+          <form id="todoForm" class="flex gap-2">
+            <input
+              id="todoInput"
+              class="flex-1 rounded-xl bg-slate-950/60 border border-slate-800 px-4 py-3 outline-none focus:border-slate-600"
+              placeholder="Add a task… (Enter)"
+              autocomplete="off"
+              maxlength="140"
+            />
+            <button
+              class="rounded-xl px-4 py-3 bg-slate-100 text-slate-950 font-semibold hover:opacity-90"
+              type="submit"
+            >
+              Add
+            </button>
+          </form>
+
+          <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="text-sm text-slate-400">
+              <span id="countActive">0</span> active • <span id="countCompleted">0</span> completed
+            </div>
+
+            <div class="flex gap-2">
+              <button data-filter="all" class="filter-btn">All</button>
+              <button data-filter="active" class="filter-btn">Active</button>
+              <button data-filter="completed" class="filter-btn">Completed</button>
+            </div>
+          </div>
+        </div>
+
+        <ul id="todoList" class="divide-y divide-slate-800"></ul>
+
+        <div class="p-4 flex items-center justify-between gap-3">
+          <button
+            id="clearCompleted"
+            class="text-sm text-slate-400 hover:text-slate-200"
+            type="button"
+          >
+            Clear completed
+          </button>
+
+          <div class="text-xs text-slate-500">
+            Tip: click text to edit • double-click to toggle
+          </div>
+        </div>
+      </section>
+
+      <footer class="mt-6 text-xs text-slate-600">
+        Local persistence: <code class="text-slate-500">data/todos.json</code>
+      </footer>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
