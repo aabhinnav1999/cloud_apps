@@ -51,3 +51,7 @@ build/
 # Coverage
 # -------------------------
 coverage/
+
+env/
+*.pyc
+__pycache__/

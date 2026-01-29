@@ -1,0 +1,82 @@
+{% extends "todos/base.html" %}
+{% block title %}To-Do{% endblock %}
+
+{% block content %}
+  <div class="mb-4">
+    <h1 class="fw-bold">To-Do</h1>
+    <div class="muted">Simple, fast, persistent (SQLite).</div>
+  </div>
+
+  <div class="card card-soft rounded-4 shadow-lg">
+    <div class="p-4 border-bottom" style="border-color: rgba(255,255,255,0.08) !important;">
+      <form method="post" action="{% url 'todos:add' %}?filter={{ filter }}" class="d-flex gap-2">
+        {% csrf_token %}
+        <input
+          name="text"
+          class="form-control form-control-lg bg-dark text-white border-0"
+          placeholder="Add a task… (Enter)"
+          maxlength="140"
+          required
+          autofocus
+        />
+        <button class="btn btn-light btn-lg fw-semibold" type="submit">Add</button>
+      </form>
+
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3">
+        <div class="muted">
+          <span class="fw-semibold">{{ active_count }}</span> active •
+          <span class="fw-semibold">{{ completed_count }}</span> completed
+        </div>
+
+        <div class="btn-group" role="group" aria-label="filters">
+          <a class="btn btn-outline-light btn-filter {% if filter == 'all' %}active{% endif %}" href="/?filter=all">All</a>
+          <a class="btn btn-outline-light btn-filter {% if filter == 'active' %}active{% endif %}" href="/?filter=active">Active</a>
+          <a class="btn btn-outline-light btn-filter {% if filter == 'completed' %}active{% endif %}" href="/?filter=completed">Completed</a>
+        </div>
+      </div>
+    </div>
+
+    <ul class="list-group list-group-flush">
+      {% if todos %}
+        {% for t in todos %}
+          <li class="list-group-item bg-transparent text-white d-flex align-items-center justify-content-between py-3"
+              style="border-color: rgba(255,255,255,0.08) !important;">
+            <div class="d-flex align-items-center gap-3">
+              <form method="post" action="{% url 'todos:toggle' t.id %}?filter={{ filter }}">
+                {% csrf_token %}
+                <button class="btn btn-sm {% if t.completed %}btn-success{% else %}btn-outline-light{% endif %}" type="submit">
+                  {% if t.completed %}Done{% else %}Mark{% endif %}
+                </button>
+              </form>
+
+              <div class="todo-text {% if t.completed %}completed{% endif %}">
+                {{ t.text }}
+              </div>
+            </div>
+
+            <form method="post" action="{% url 'todos:delete' t.id %}?filter={{ filter }}">
+              {% csrf_token %}
+              <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+            </form>
+          </li>
+        {% endfor %}
+      {% else %}
+        <li class="list-group-item bg-transparent text-white py-4 muted"
+            style="border-color: rgba(255,255,255,0.08) !important;">
+          No tasks here. Add one above 👆
+        </li>
+      {% endif %}
+    </ul>
+
+    <div class="p-4 d-flex justify-content-between align-items-center gap-3">
+      <form method="post" action="{% url 'todos:clear_completed' %}?filter={{ filter }}">
+        {% csrf_token %}
+        <button class="btn btn-link text-decoration-none muted p-0" type="submit">
+          Clear completed
+        </button>
+      </form>
+
+      <div class="muted small">Tip: use filters to focus.</div>
+    </div>
+  </div>
+{% endblock %}
