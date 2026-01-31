@@ -1,0 +1,21 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+.venv/
+venv/
+env/
+
+.git/
+.gitignore
+
+Dockerfile
+docker-compose.yml
+
+*.log
+*.sqlite3
+
+# If you keep local env files
+.env
+.env.*
