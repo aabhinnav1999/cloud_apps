@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  product-db:
+    image: postgres:16
+    container_name: product-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - product_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  product-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: product-service
+    restart: unless-stopped
+    depends_on:
+      product-db:
+        condition: service_healthy
+    environment:
+      APP_NAME: product-service
+      APP_PORT: 8082
+      DB_HOST: product-db
+      DB_PORT: 5432
+      DB_NAME: productdb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./app:/app/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8082 --reload
+
+volumes:
+  product_db_data:
