@@ -1,0 +1,35 @@
+version: "3.9"
+
+services:
+  cart-db:
+    image: redis:7
+    container_name: cart-db
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - cart_redis_data:/data
+
+  cart-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cart-service
+    restart: unless-stopped
+    depends_on:
+      - cart-db
+    environment:
+      PORT: 8083
+      NODE_ENV: development
+      JWT_SECRET: mySuperSecretKeyForJwtTokenGeneration1234567890
+      REDIS_HOST: cart-db
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+    ports:
+      - "8083:8083"
+    volumes:
+      - ./src:/app/src
+    command: npm run dev
+
+volumes:
+  cart_redis_data:
