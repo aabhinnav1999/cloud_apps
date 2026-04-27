@@ -8,3 +8,8 @@ curl -X POST http://localhost:8084/api/inventory/  -H "Content-Type: application
     "total_quantity": 100
   }'
 ```
+### Get inventory
+
+```
+curl http://localhost:8084/api/inventory/1
+```
