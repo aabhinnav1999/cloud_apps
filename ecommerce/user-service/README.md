@@ -1,9 +1,17 @@
 # User Service is created using Java ➕ Spring Boot
 
-### Run PostgreSQL container
+### Docker Commands
+
+#### Create a network
+```
+docker network create ecommerce-net
+```
+
+#### Run PostgreSQL container
 ```
 docker run -d \
   --name user-db \
+  --network ecommerce-net \
   -e POSTGRES_DB=userdb \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
@@ -12,20 +20,16 @@ docker run -d \
 ```
 Note: Replace username and password with your credentials
 
-### Run Spring Boot app (optional; just for testing)
-```
-mvn spring-boot:run
-```
 
-### Docker Commands
 ```
 docker build -t user-service .
 ```
 ```
 docker run -d \
   --name user-service \
+  --network ecommerce-net \
   -p 8081:8081 \
-  -e DB_HOST=host.docker.internal \
+  -e DB_HOST=user-db \
   -e DB_PORT=5432 \
   -e DB_NAME=userdb \
   -e DB_USERNAME=postgres \
@@ -42,6 +46,12 @@ docker compose up -d
 
 ```
 docker compose down
+```
+
+
+### Run Spring Boot app (optional; just for testing)
+```
+mvn spring-boot:run
 ```
 
 ### API Usage
