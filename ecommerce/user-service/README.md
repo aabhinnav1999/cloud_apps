@@ -57,3 +57,51 @@ curl -X POST http://localhost:8081/api/auth/register \
     "phoneNumber": "9876543210"
   }'
 ```
+#### Login
+```
+curl -X POST http://localhost:8081/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "testuser1@example.com",
+    "password": "password123"
+  }'
+```
+
+#### Get current user
+```
+curl http://localhost:8081/api/users/me \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Update Current User
+```
+curl -X PUT http://localhost:8081/api/users/me \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "fullName": "test user",
+    "phoneNumber": "9999999999"
+  }'
+```
+
+#### Add address
+```
+curl -X POST http://localhost:8081/api/addresses \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "line1": "12 Main Street",
+    "line2": "Apartment 1B",
+    "city": "Dublin",
+    "state": "Leinster",
+    "country": "Ireland",
+    "postalCode": "D02XY12",
+    "isDefault": true
+  }'
+```
+
+#### Get Address
+```
+curl http://localhost:8081/api/addresses \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
