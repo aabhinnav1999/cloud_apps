@@ -34,3 +34,26 @@ docker run -d \
   user-service
 ```
 Note: Replace JWT_SECRET for security, Credentials are from PostgreSQL container
+
+### Docker Compose commands
+```
+docker compose up -d
+```
+
+```
+docker compose down
+```
+
+### API Usage
+
+#### User Registration
+```
+curl -X POST http://localhost:8081/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fullName": "test userone",
+    "email": "testuser1@example.com",
+    "password": "password123",
+    "phoneNumber": "9876543210"
+  }'
+```
