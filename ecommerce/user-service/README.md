@@ -1,5 +1,14 @@
 # User Service is created using Java ➕ Spring Boot
 
+### Docker Compose commands
+```
+docker compose up -d
+```
+
+```
+docker compose down
+```
+
 ### Docker Commands
 
 #### Create a network
@@ -38,15 +47,6 @@ docker run -d \
   user-service
 ```
 Note: Replace JWT_SECRET for security, Credentials are from PostgreSQL container
-
-### Docker Compose commands
-```
-docker compose up -d
-```
-
-```
-docker compose down
-```
 
 
 ### Run Spring Boot app (optional; just for testing)
