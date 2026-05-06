@@ -245,33 +245,6 @@ curl -X DELETE http://localhost:8083/api/cart -H "Authorization: Bearer YOUR_JWT
 
 ---
 
-## Example Cart Response
-
-```json
-{
-  "success": true,
-  "message": "Cart fetched successfully",
-  "data": {
-    "userEmail": "testuser1@example.com",
-    "items": [
-      {
-        "productId": 1,
-        "name": "Wireless Mouse",
-        "brand": "LogiTech",
-        "price": 29.99,
-        "imageUrl": "https://example.com/images/mouse.jpg",
-        "quantity": 2
-      }
-    ],
-    "totalItems": 1,
-    "totalQuantity": 2,
-    "totalAmount": 59.98
-  }
-}
-```
-
----
-
 ## Redis Data Model
 
 Cart data is stored in Redis using the user's email as part of the key.
