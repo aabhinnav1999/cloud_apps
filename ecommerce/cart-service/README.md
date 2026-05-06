@@ -82,7 +82,7 @@ http://localhost:8083
 From inside the `cart-service` directory:
 
 ```bash
-docker compose up --build
+docker compose up -d
 ```
 
 This starts:
@@ -334,5 +334,3 @@ Also confirm that `JWT_SECRET` is the same in both `user-service` and `cart-serv
 ### 3. Cart item not found
 
 This happens when updating or deleting a product ID that does not exist in the user's cart.
-
----
