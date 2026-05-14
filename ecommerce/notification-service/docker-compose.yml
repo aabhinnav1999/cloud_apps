@@ -15,7 +15,7 @@ services:
     depends_on:
       - mongodb
 
-    restart: unless-stopped
+    restart: never
 
   mongodb:
     image: mongo:7
@@ -28,7 +28,7 @@ services:
     volumes:
       - mongodb_data:/data/db
 
-    restart: unless-stopped
+    restart: never
 
 volumes:
   mongodb_data:
