@@ -10,7 +10,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5434:5432"
+      - "5435:5432"
     volumes:
       - order_db_data:/var/lib/postgresql/data
     healthcheck:
@@ -36,7 +36,7 @@ services:
       DB_PASSWORD: postgres
       JWT_SECRET: mySuperSecretKeyForJwtTokenGeneration1234567890
     ports:
-      - "8084:8084"
+      - "8085:8085"
 
 volumes:
   order_db_data:
