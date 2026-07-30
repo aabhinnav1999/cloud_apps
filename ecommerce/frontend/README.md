@@ -2,7 +2,7 @@
 
 React + Vite web client for the e-commerce microservices project.
 
-This first slice covers **authentication (login/register)** and the **product listing**. Cart and checkout screens are planned next.
+Covers the full shopping flow: **authentication (login/register)**, **product listing**, **cart**, **checkout**, and **order history**.
 
 ---
 
@@ -18,15 +18,18 @@ This first slice covers **authentication (login/register)** and the **product li
 
 ## Prerequisites
 
-The frontend talks to the backend services through Vite's dev proxy. For the current
-screens you need at least these two services running:
+The frontend talks to the backend services through Vite's dev proxy. You need these services running for the full flow:
 
-| Service         | Port | Used for            |
-|-----------------|------|---------------------|
-| user-service    | 8081 | login / register    |
-| product-service | 8082 | product listing     |
+| Service         | Port | Used for                    |
+|-----------------|------|-----------------------------|
+| user-service    | 8081 | login / register            |
+| product-service | 8082 | product listing             |
+| cart-service    | 8083 | cart (add / update / remove)|
+| order-service   | 8085 | checkout, order history     |
 
-(The proxy is also pre-wired for cart `8083`, inventory `8084`, and order `8085` for later screens.)
+cart-service also needs **Redis** running, and order-service needs its **PostgreSQL** DB
+(both are handled by their respective `docker compose up`). The proxy is also pre-wired
+for inventory `8084` for a later screen.
 
 ---
 
@@ -93,14 +96,36 @@ frontend/
     │   └── client.js       # axios instance, JWT interceptor, error helper
     ├── context/
     │   └── AuthContext.jsx # login / register / logout + session state
+    ├── api/
+    │   ├── client.js       # axios instance, JWT interceptor, error helper
+    │   ├── cart.js         # cart-service calls (unwraps { data })
+    │   └── orders.js       # order-service calls + cart→order item mapping
+    ├── context/
+    │   ├── AuthContext.jsx # login / register / logout + session state
+    │   └── CartContext.jsx # cart state, add/update/remove, badge count
     ├── components/
-    │   ├── Navbar.jsx
+    │   ├── Navbar.jsx      # cart badge + links
     │   └── ProtectedRoute.jsx
     └── pages/
         ├── Login.jsx
         ├── Register.jsx
-        └── Products.jsx
+        ├── Products.jsx    # add to cart
+        ├── Cart.jsx        # qty +/-, remove, clear, totals
+        ├── Checkout.jsx    # shipping form -> create order
+        └── Orders.jsx      # order history + cancel
 ```
+
+## Shopping flow
+
+```text
+Products → Add to cart (cart-service)
+        → Cart: adjust quantities / remove
+        → Checkout: shipping form → POST /api/orders (order-service)
+        → Cart cleared → Orders: confirmation + history (cancel if PENDING/CONFIRMED)
+```
+
+Note: cart items store `name`/`imageUrl`, but order items expect `productName`.
+`src/api/orders.js#cartItemToOrderItem` handles that mapping at checkout.
 
 ---
 
@@ -120,11 +145,21 @@ Response: `{ "token": "...", "user": { "id", "fullName", "email", "phoneNumber",
 **List products** — `GET /api/products?search=<term>&is_active=true`
 Response: array of `{ id, name, description, brand, price, image_url, is_active, created_at, category_id, category_name }`
 
+**Cart** (all JWT; responses wrapped as `{ success, message, data }`)
+- `GET /api/cart` → `data` = `{ items[], totalItems, totalQuantity, totalAmount }`
+- `POST /api/cart/items` → `{ productId, name, brand, price, imageUrl, quantity }`
+- `PUT /api/cart/items/:productId` → `{ quantity }`
+- `DELETE /api/cart/items/:productId` · `DELETE /api/cart`
+
+**Orders** (all JWT; raw JSON, no wrapper)
+- `POST /api/orders` → `{ fullName, phoneNumber, addressLine1, addressLine2?, city, state, country, postalCode, items[{ productId, productName, brand, price, quantity }] }`
+- `GET /api/orders` → `OrderResponse[]` · `PUT /api/orders/:id/cancel`
+
 ---
 
 ## Next Steps (not built yet)
 
-- Cart page (cart-service, `/api/cart`)
-- Checkout → create order (order-service, `/api/orders`)
-- Show stock from inventory-service on product cards
-- "Add to cart" button (currently disabled as a placeholder)
+- Show live stock from inventory-service on product cards / block over-ordering
+- Reserve/deduct inventory when an order is placed (needs backend wiring too)
+- Order detail page (`GET /api/orders/:id`)
+- Product category filter (`GET /api/categories`)

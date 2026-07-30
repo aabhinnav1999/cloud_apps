@@ -1,8 +1,10 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useCart } from "../context/CartContext.jsx";
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
+  const { count } = useCart();
   const navigate = useNavigate();
 
   function handleLogout() {
@@ -19,6 +21,11 @@ export default function Navbar() {
         {isAuthenticated ? (
           <>
             <Link to="/products">Products</Link>
+            <Link to="/orders">Orders</Link>
+            <Link to="/cart" className="cart-link">
+              Cart
+              {count > 0 && <span className="cart-badge">{count}</span>}
+            </Link>
             <span className="nav-user">{user?.fullName || user?.email}</span>
             <button className="btn btn-ghost" onClick={handleLogout}>
               Logout

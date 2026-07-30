@@ -218,3 +218,10 @@ __marimo__/
 # VS Code
 .vscode/
 !.vscode/extensions.json
+
+node_modules
+dist
+.env
+.env.local
+*.log
+.DS_Store
