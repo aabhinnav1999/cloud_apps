@@ -25,11 +25,14 @@ The frontend talks to the backend services through Vite's dev proxy. You need th
 | user-service    | 8081 | login / register            |
 | product-service | 8082 | product listing             |
 | cart-service    | 8083 | cart (add / update / remove)|
+| inventory-service | 8084 | live stock on product cards |
 | order-service   | 8085 | checkout, order history     |
 
-cart-service also needs **Redis** running, and order-service needs its **PostgreSQL** DB
-(both are handled by their respective `docker compose up`). The proxy is also pre-wired
-for inventory `8084` for a later screen.
+cart-service also needs **Redis** running, and inventory/order-service each need their
+**PostgreSQL** DB (all handled by their respective `docker compose up`).
+
+Note: order-service also calls inventory-service to reserve stock at checkout, so an
+inventory record must exist for each product (`POST /api/inventory/`) or the order fails.
 
 ---
 
@@ -159,7 +162,10 @@ Response: array of `{ id, name, description, brand, price, image_url, is_active,
 
 ## Next Steps (not built yet)
 
-- Show live stock from inventory-service on product cards / block over-ordering
-- Reserve/deduct inventory when an order is placed (needs backend wiring too)
 - Order detail page (`GET /api/orders/:id`)
 - Product category filter (`GET /api/categories`)
+- Admin screens: create products / set inventory levels
+
+> Live stock display and order→inventory reservation are now wired up. Product cards show
+> "In stock: N" / "Out of stock" (from inventory-service), and placing an order reserves
+> stock in inventory-service.

@@ -1,5 +1,6 @@
 package com.ecommerce.orderservice.service;
 
+import com.ecommerce.orderservice.client.InventoryClient;
 import com.ecommerce.orderservice.dto.*;
 import com.ecommerce.orderservice.entity.Order;
 import com.ecommerce.orderservice.entity.OrderItem;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -18,12 +20,17 @@ import java.util.List;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final InventoryClient inventoryClient;
 
     public OrderResponse createOrder(String userEmail, CreateOrderRequest request) {
         BigDecimal totalAmount = request.getItems()
                 .stream()
                 .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Reserve stock for every item before persisting the order.
+        // If any reservation fails, already-reserved items are rolled back.
+        reserveStock(request.getItems());
 
         Order order = Order.builder()
                 .userEmail(userEmail)
@@ -59,8 +66,16 @@ public class OrderService {
 
         order.setItems(items);
 
-        Order savedOrder = orderRepository.save(order);
-        return mapToResponse(savedOrder);
+        try {
+            Order savedOrder = orderRepository.save(order);
+            return mapToResponse(savedOrder);
+        } catch (RuntimeException ex) {
+            // Persisting failed after stock was reserved — release it back.
+            for (OrderItemRequest item : request.getItems()) {
+                safeRelease(item.getProductId(), item.getQuantity());
+            }
+            throw ex;
+        }
     }
 
     public List<OrderResponse> getMyOrders(String userEmail) {
@@ -87,6 +102,15 @@ public class OrderService {
 
         validateStatusTransition(order.getStatus(), request.getStatus());
 
+        // Stock side effects of a status change:
+        //  - SHIPPED    -> deduct reserved stock permanently
+        //  - CANCELLED  -> release the reservation back to available
+        if (request.getStatus() == OrderStatus.SHIPPED) {
+            deductStock(order.getItems());
+        } else if (request.getStatus() == OrderStatus.CANCELLED) {
+            releaseStock(order.getItems());
+        }
+
         order.setStatus(request.getStatus());
         Order savedOrder = orderRepository.save(order);
 
@@ -101,14 +125,60 @@ public class OrderService {
             throw new ResourceNotFoundException("Order not found");
         }
 
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalArgumentException("Order is already cancelled");
+        }
+
         if (order.getStatus() == OrderStatus.SHIPPED || order.getStatus() == OrderStatus.DELIVERED) {
             throw new IllegalArgumentException("Order cannot be cancelled at this stage");
         }
+
+        // Reserved stock (order was PENDING/CONFIRMED) goes back to available.
+        releaseStock(order.getItems());
 
         order.setStatus(OrderStatus.CANCELLED);
         Order savedOrder = orderRepository.save(order);
 
         return mapToResponse(savedOrder);
+    }
+
+    // ---- inventory helpers ----
+
+    private void reserveStock(List<OrderItemRequest> items) {
+        List<OrderItemRequest> reserved = new ArrayList<>();
+        for (OrderItemRequest item : items) {
+            try {
+                inventoryClient.reserve(item.getProductId(), item.getQuantity());
+                reserved.add(item);
+            } catch (RuntimeException ex) {
+                // Roll back reservations made so far, then surface the failure.
+                for (OrderItemRequest done : reserved) {
+                    safeRelease(done.getProductId(), done.getQuantity());
+                }
+                throw ex;
+            }
+        }
+    }
+
+    private void deductStock(List<OrderItem> items) {
+        for (OrderItem item : items) {
+            inventoryClient.deduct(item.getProductId(), item.getQuantity());
+        }
+    }
+
+    private void releaseStock(List<OrderItem> items) {
+        for (OrderItem item : items) {
+            safeRelease(item.getProductId(), item.getQuantity());
+        }
+    }
+
+    /** Best-effort release; never masks the original operation's outcome. */
+    private void safeRelease(Long productId, int quantity) {
+        try {
+            inventoryClient.release(productId, quantity);
+        } catch (RuntimeException ignored) {
+            // Intentionally swallowed — this is a compensating action.
+        }
     }
 
     private void validateStatusTransition(OrderStatus current, OrderStatus next) {

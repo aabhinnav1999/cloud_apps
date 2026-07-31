@@ -35,6 +35,9 @@ DB_PASSWORD=postgres
 
 JWT_SECRET=mySuperSecretKeyForJwtTokenGeneration1234567890
 JWT_EXPIRATION=86400000
+
+# Base URL of the inventory-service (for stock reserve/release/deduct)
+INVENTORY_SERVICE_URL=http://localhost:8084
 ```
 
 > Important: The `JWT_SECRET` must match the secret used by your `user-service`, otherwise the Order Service will reject the token.
@@ -262,6 +265,33 @@ order-service is up
 
 ---
 
+## Inventory Integration
+
+The Order Service calls the **inventory-service** (`INVENTORY_SERVICE_URL`, default
+`http://localhost:8084`) to keep stock in sync with the order lifecycle:
+
+| Order action                     | Inventory call                          |
+|----------------------------------|-----------------------------------------|
+| Create order                     | `reserve` each item                     |
+| Status → `SHIPPED`               | `deduct` each item (permanent)          |
+| Status → `CANCELLED` / Cancel    | `release` each item (back to available) |
+
+Behavior:
+
+- **Create order** reserves stock for every item first. If any item can't be reserved
+  (insufficient stock, or no inventory record), already-reserved items are rolled back
+  and the order is **not** created — the request fails with `400`.
+- If the inventory-service is **unreachable**, order creation fails with `502 Bad Gateway`.
+- Stock reservation requires an inventory record to already exist for each product
+  (create one via `POST http://localhost:8084/api/inventory/`).
+
+> Docker note: the two services live in separate compose files. `order-service`'s compose
+> reaches inventory via `host.docker.internal:8084` (with `extra_hosts` for Linux). To run
+> them on a shared Docker network instead, point `INVENTORY_SERVICE_URL` at the
+> `inventory-service` container name.
+
+---
+
 ## Order Status Lifecycle
 
 ```text
@@ -374,3 +404,14 @@ This happens when fetching, updating, or cancelling an order ID that does not ex
 ### 4. Invalid status transition
 
 Returns `400 Bad Request` when the requested status change is not allowed by the lifecycle (e.g. cancelling a `SHIPPED` order, or changing a `DELIVERED`/`CANCELLED` order).
+
+---
+
+### 5. Order creation fails on stock
+
+- `400` with `"Inventory reserve failed for product X: Not enough stock available"` — the
+  product doesn't have enough available stock. Reduce the quantity or restock.
+- `400` with `"... Inventory not found"` — no inventory record exists for that product yet.
+  Create one via `POST http://localhost:8084/api/inventory/`.
+- `502 Bad Gateway` — the inventory-service is not running or not reachable at
+  `INVENTORY_SERVICE_URL`.
