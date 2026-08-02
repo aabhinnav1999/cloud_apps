@@ -1,11 +1,15 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
+import { useNotifications } from "../context/NotificationContext.jsx";
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth();
   const { count } = useCart();
+  const { unreadCount } = useNotifications();
   const navigate = useNavigate();
+
+  const isAdmin = user?.role === "ADMIN";
 
   function handleLogout() {
     logout();
@@ -22,6 +26,11 @@ export default function Navbar() {
           <>
             <Link to="/products">Products</Link>
             <Link to="/orders">Orders</Link>
+            {isAdmin && <Link to="/admin">Admin</Link>}
+            <Link to="/notifications" className="cart-link">
+              🔔
+              {unreadCount > 0 && <span className="cart-badge">{unreadCount}</span>}
+            </Link>
             <Link to="/cart" className="cart-link">
               Cart
               {count > 0 && <span className="cart-badge">{count}</span>}

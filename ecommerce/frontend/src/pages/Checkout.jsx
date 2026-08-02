@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { createOrder, cartItemToOrderItem } from "../api/orders.js";
+import { createNotification } from "../api/notifications.js";
+import { useNotifications } from "../context/NotificationContext.jsx";
 import { extractErrorMessage } from "../api/client.js";
 
 function formatPrice(value) {
@@ -13,6 +15,7 @@ function formatPrice(value) {
 export default function Checkout() {
   const { cart, clear } = useCart();
   const { user } = useAuth();
+  const { refresh: refreshNotifications } = useNotifications();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -48,6 +51,26 @@ export default function Checkout() {
         items: items.map(cartItemToOrderItem),
       };
       const order = await createOrder(payload);
+
+      // Fire off an in-app notification (best-effort; ignore if the
+      // notification-service is down). Ideally the order-service would emit
+      // this event server-side — see README note.
+      try {
+        await createNotification({
+          userId: String(user?.id ?? ""),
+          orderId: String(order.id),
+          type: "ORDER_CREATED",
+          channel: "APP",
+          title: "Order placed",
+          message: `Your order #${order.id} has been placed successfully for $${Number(
+            order.totalAmount
+          ).toFixed(2)}.`,
+        });
+        refreshNotifications();
+      } catch {
+        /* notification is non-critical */
+      }
+
       // Order placed — clear the cart, then show the confirmation.
       await clear();
       navigate("/orders", {

@@ -2,7 +2,9 @@
 
 React + Vite web client for the e-commerce microservices project.
 
-Covers the full shopping flow: **authentication (login/register)**, **product listing**, **cart**, **checkout**, and **order history**.
+Covers the full shopping flow: **authentication (login/register)**, **product listing**
+with search + category filter and live stock, **cart**, **checkout**, **order history**,
+**in-app notifications**, and an **admin** area (create categories/products, set inventory).
 
 ---
 
@@ -25,14 +27,27 @@ The frontend talks to the backend services through Vite's dev proxy. You need th
 | user-service    | 8081 | login / register            |
 | product-service | 8082 | product listing             |
 | cart-service    | 8083 | cart (add / update / remove)|
-| inventory-service | 8084 | live stock on product cards |
+| inventory-service | 8084 | live stock, admin set-stock |
 | order-service   | 8085 | checkout, order history     |
+| notification-service | 8086 | in-app notifications     |
 
-cart-service also needs **Redis** running, and inventory/order-service each need their
-**PostgreSQL** DB (all handled by their respective `docker compose up`).
+cart-service needs **Redis**, inventory/order-service each need **PostgreSQL**, and
+notification-service needs **MongoDB** (all handled by their respective `docker compose up`).
 
 Note: order-service also calls inventory-service to reserve stock at checkout, so an
-inventory record must exist for each product (`POST /api/inventory/`) or the order fails.
+inventory record must exist for each product (create one from the **Admin** page, or
+`POST /api/inventory/`) or the order fails.
+
+### Admin access
+
+The Admin area is gated on `user.role === "ADMIN"`. Registration creates `CUSTOMER`
+users, so to see it, promote a user in the user-service database:
+
+```sql
+UPDATE users SET role = 'ADMIN' WHERE email = 'you@example.com';
+```
+
+Then log out and back in (the role travels in the stored user object).
 
 ---
 
@@ -73,6 +88,7 @@ The browser only ever calls **same-origin** `/api/...` paths. Vite's dev server
 /api/cart      → http://localhost:8083   (cart-service)
 /api/inventory → http://localhost:8084   (inventory-service)
 /api/orders    → http://localhost:8085   (order-service)
+/api/notifications → http://localhost:8086 (notification-service)
 ```
 
 ### Authentication
@@ -92,30 +108,33 @@ frontend/
 ├── package.json
 ├── vite.config.js          # dev proxy to backend services
 └── src/
-    ├── main.jsx            # app entry (Router + AuthProvider)
+    ├── main.jsx            # app entry (Router + Auth/Cart/Notification providers)
     ├── App.jsx             # routes
     ├── index.css           # global styles
     ├── api/
-    │   └── client.js       # axios instance, JWT interceptor, error helper
-    ├── context/
-    │   └── AuthContext.jsx # login / register / logout + session state
-    ├── api/
     │   ├── client.js       # axios instance, JWT interceptor, error helper
     │   ├── cart.js         # cart-service calls (unwraps { data })
-    │   └── orders.js       # order-service calls + cart→order item mapping
+    │   ├── orders.js       # order-service calls + cart→order item mapping
+    │   ├── inventory.js    # stock read + admin create/update/set
+    │   ├── catalog.js      # categories + product create (product-service)
+    │   └── notifications.js# notification-service calls
     ├── context/
-    │   ├── AuthContext.jsx # login / register / logout + session state
-    │   └── CartContext.jsx # cart state, add/update/remove, badge count
+    │   ├── AuthContext.jsx        # login / register / logout + session state
+    │   ├── CartContext.jsx        # cart state, add/update/remove, badge count
+    │   └── NotificationContext.jsx# notifications + unread badge
     ├── components/
-    │   ├── Navbar.jsx      # cart badge + links
-    │   └── ProtectedRoute.jsx
+    │   ├── Navbar.jsx      # cart + bell badges, admin link
+    │   ├── ProtectedRoute.jsx     # requires login
+    │   └── AdminRoute.jsx         # requires ADMIN role
     └── pages/
         ├── Login.jsx
         ├── Register.jsx
-        ├── Products.jsx    # add to cart
+        ├── Products.jsx    # search, category filter, live stock, add to cart
         ├── Cart.jsx        # qty +/-, remove, clear, totals
-        ├── Checkout.jsx    # shipping form -> create order
-        └── Orders.jsx      # order history + cancel
+        ├── Checkout.jsx    # shipping form → create order (+ notification)
+        ├── Orders.jsx      # order history + cancel
+        ├── Notifications.jsx      # list, mark-read, delete
+        └── Admin.jsx       # create category / product / set inventory
 ```
 
 ## Shopping flow
@@ -123,12 +142,16 @@ frontend/
 ```text
 Products → Add to cart (cart-service)
         → Cart: adjust quantities / remove
-        → Checkout: shipping form → POST /api/orders (order-service)
+        → Checkout: shipping form → POST /api/orders (order-service reserves stock)
+        → creates an in-app notification (notification-service)
         → Cart cleared → Orders: confirmation + history (cancel if PENDING/CONFIRMED)
 ```
 
-Note: cart items store `name`/`imageUrl`, but order items expect `productName`.
-`src/api/orders.js#cartItemToOrderItem` handles that mapping at checkout.
+Notes:
+- Cart items store `name`/`imageUrl`, but order items expect `productName` —
+  `src/api/orders.js#cartItemToOrderItem` handles that mapping at checkout.
+- The checkout notification is created **client-side** for the demo. In a fuller design
+  the order-service would emit this event server-side when an order is created.
 
 ---
 
@@ -145,8 +168,21 @@ Response: `{ "token": "...", "user": { "id", "fullName", "email", "phoneNumber",
 { "fullName": "John Doe", "email": "user@example.com", "password": "password123", "phoneNumber": "9876543210" }
 ```
 
-**List products** — `GET /api/products?search=<term>&is_active=true`
+**List products** — `GET /api/products?search=<term>&category_id=<id>&is_active=true`
 Response: array of `{ id, name, description, brand, price, image_url, is_active, created_at, category_id, category_name }`
+
+**Categories / product create** (admin)
+- `GET /api/categories` → `[{ id, name }]` · `POST /api/categories` → `{ name }`
+- `POST /api/products` → `{ name, description, brand, price, image_url, category_id, is_active }`
+
+**Inventory**
+- `GET /api/inventory/:productId` → `{ product_id, total_quantity, reserved_quantity, available_quantity }`
+- `POST /api/inventory/` → `{ product_id, total_quantity }` · `PUT /api/inventory/:productId` → `{ total_quantity }`
+
+**Notifications** (wrapped as `{ success, data }`)
+- `GET /api/notifications/user/:userId` → `data` = `[{ _id, title, message, type, status, orderId, createdAt }]`
+- `POST /api/notifications/` → `{ userId, orderId, type, channel, title, message }`
+- `PATCH /api/notifications/:id/read` · `DELETE /api/notifications/:id`
 
 **Cart** (all JWT; responses wrapped as `{ success, message, data }`)
 - `GET /api/cart` → `data` = `{ items[], totalItems, totalQuantity, totalAmount }`
@@ -162,10 +198,7 @@ Response: array of `{ id, name, description, brand, price, image_url, is_active,
 
 ## Next Steps (not built yet)
 
+- Move the checkout notification into order-service (server-side event emission)
+- Admin: edit/deactivate existing products, list all orders, update order status
 - Order detail page (`GET /api/orders/:id`)
-- Product category filter (`GET /api/categories`)
-- Admin screens: create products / set inventory levels
-
-> Live stock display and order→inventory reservation are now wired up. Product cards show
-> "In stock: N" / "Out of stock" (from inventory-service), and placing an order reserves
-> stock in inventory-service.
+- Real API gateway in front of the services (replace the dev proxy)

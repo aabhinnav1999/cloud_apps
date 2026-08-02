@@ -37,6 +37,10 @@ export default defineConfig({
         target: "http://localhost:8085", // order-service
         changeOrigin: true,
       },
+      "/api/notifications": {
+        target: "http://localhost:8086", // notification-service
+        changeOrigin: true,
+      },
     },
   },
 });

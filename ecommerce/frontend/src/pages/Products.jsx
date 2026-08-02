@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import client, { extractErrorMessage } from "../api/client.js";
 import { useCart } from "../context/CartContext.jsx";
 import { fetchAvailableStock } from "../api/inventory.js";
+import { fetchCategories } from "../api/catalog.js";
 
 function formatPrice(value) {
   const num = Number(value);
@@ -11,6 +12,8 @@ function formatPrice(value) {
 export default function Products() {
   const { addItem } = useCart();
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [category, setCategory] = useState(""); // "" = all
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -46,15 +49,16 @@ export default function Products() {
     }
   }
 
-  async function loadProducts(searchTerm = "") {
+  async function loadProducts(searchTerm = "", categoryId = "") {
     setLoading(true);
     setError("");
     try {
-      // product-service: GET /api/products?search=&is_active=true
+      // product-service: GET /api/products?search=&category_id=&is_active=true
       const { data } = await client.get("/api/products", {
         params: {
           is_active: true,
           ...(searchTerm ? { search: searchTerm } : {}),
+          ...(categoryId ? { category_id: categoryId } : {}),
         },
       });
       setProducts(data);
@@ -69,11 +73,20 @@ export default function Products() {
 
   useEffect(() => {
     loadProducts();
+    fetchCategories()
+      .then(setCategories)
+      .catch(() => setCategories([]));
   }, []);
 
   function handleSearch(e) {
     e.preventDefault();
-    loadProducts(search.trim());
+    loadProducts(search.trim(), category);
+  }
+
+  function handleCategoryChange(e) {
+    const value = e.target.value;
+    setCategory(value);
+    loadProducts(search.trim(), value);
   }
 
   return (
@@ -81,6 +94,14 @@ export default function Products() {
       <div className="page-head">
         <h1>Products</h1>
         <form className="search" onSubmit={handleSearch}>
+          <select value={category} onChange={handleCategoryChange} className="cat-select">
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
           <input
             type="text"
             placeholder="Search products..."
