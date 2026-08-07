@@ -14,13 +14,14 @@ export function NotificationProvider({ children }) {
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!isAuthenticated || !user?.id) {
+    if (!isAuthenticated || !user?.email) {
       setNotifications([]);
       return;
     }
     setLoading(true);
     try {
-      const data = await fetchUserNotifications(user.id);
+      // order-service emits notifications keyed by the user's email.
+      const data = await fetchUserNotifications(user.email);
       setNotifications(data);
     } catch {
       // notification-service may be down — treat as empty, don't block the app
@@ -28,7 +29,7 @@ export function NotificationProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.email]);
 
   useEffect(() => {
     refresh();

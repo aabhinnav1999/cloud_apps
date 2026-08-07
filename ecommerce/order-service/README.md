@@ -38,6 +38,9 @@ JWT_EXPIRATION=86400000
 
 # Base URL of the inventory-service (for stock reserve/release/deduct)
 INVENTORY_SERVICE_URL=http://localhost:8084
+
+# Base URL of the notification-service (for order event notifications)
+NOTIFICATION_SERVICE_URL=http://localhost:8086
 ```
 
 > Important: The `JWT_SECRET` must match the secret used by your `user-service`, otherwise the Order Service will reject the token.
@@ -289,6 +292,29 @@ Behavior:
 > reaches inventory via `host.docker.internal:8084` (with `extra_hosts` for Linux). To run
 > them on a shared Docker network instead, point `INVENTORY_SERVICE_URL` at the
 > `inventory-service` container name.
+
+---
+
+## Notification Integration
+
+On key order events, the Order Service posts an in-app notification to the
+**notification-service** (`NOTIFICATION_SERVICE_URL`, default `http://localhost:8086`)
+via `POST /api/notifications/`. The notification `userId` is the customer's **email**
+(the identity carried in the order JWT).
+
+| Order event            | Notification type  |
+|------------------------|--------------------|
+| Order created          | `ORDER_CREATED`    |
+| Status → `CONFIRMED`   | `ORDER_CONFIRMED`  |
+| Status → `CANCELLED`   | `ORDER_CANCELLED`  |
+| Cancel order           | `ORDER_CANCELLED`  |
+| Other status changes   | `GENERAL`          |
+
+Sending a notification is **best-effort**: if the notification-service is down or errors,
+the failure is logged and swallowed — it never fails the order operation.
+
+> The frontend fetches a user's notifications by email
+> (`GET /api/notifications/user/{email}`), matching what this service emits.
 
 ---
 

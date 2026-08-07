@@ -142,16 +142,16 @@ frontend/
 ```text
 Products → Add to cart (cart-service)
         → Cart: adjust quantities / remove
-        → Checkout: shipping form → POST /api/orders (order-service reserves stock)
-        → creates an in-app notification (notification-service)
+        → Checkout: shipping form → POST /api/orders
+              (order-service reserves stock AND emits a notification server-side)
         → Cart cleared → Orders: confirmation + history (cancel if PENDING/CONFIRMED)
 ```
 
 Notes:
 - Cart items store `name`/`imageUrl`, but order items expect `productName` —
   `src/api/orders.js#cartItemToOrderItem` handles that mapping at checkout.
-- The checkout notification is created **client-side** for the demo. In a fuller design
-  the order-service would emit this event server-side when an order is created.
+- Order notifications are emitted **server-side** by the order-service (keyed by the
+  user's email); the frontend just refreshes the bell after checkout and lists them.
 
 ---
 
@@ -198,7 +198,6 @@ Response: array of `{ id, name, description, brand, price, image_url, is_active,
 
 ## Next Steps (not built yet)
 
-- Move the checkout notification into order-service (server-side event emission)
 - Admin: edit/deactivate existing products, list all orders, update order status
 - Order detail page (`GET /api/orders/:id`)
 - Real API gateway in front of the services (replace the dev proxy)

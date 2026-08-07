@@ -1,6 +1,7 @@
 package com.ecommerce.orderservice.service;
 
 import com.ecommerce.orderservice.client.InventoryClient;
+import com.ecommerce.orderservice.client.NotificationClient;
 import com.ecommerce.orderservice.dto.*;
 import com.ecommerce.orderservice.entity.Order;
 import com.ecommerce.orderservice.entity.OrderItem;
@@ -21,6 +22,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final InventoryClient inventoryClient;
+    private final NotificationClient notificationClient;
 
     public OrderResponse createOrder(String userEmail, CreateOrderRequest request) {
         BigDecimal totalAmount = request.getItems()
@@ -66,9 +68,9 @@ public class OrderService {
 
         order.setItems(items);
 
+        Order savedOrder;
         try {
-            Order savedOrder = orderRepository.save(order);
-            return mapToResponse(savedOrder);
+            savedOrder = orderRepository.save(order);
         } catch (RuntimeException ex) {
             // Persisting failed after stock was reserved — release it back.
             for (OrderItemRequest item : request.getItems()) {
@@ -76,6 +78,13 @@ public class OrderService {
             }
             throw ex;
         }
+
+        notificationClient.send(userEmail, savedOrder.getId(), "ORDER_CREATED",
+                "Order placed",
+                "Your order #" + savedOrder.getId() + " has been placed successfully for $"
+                        + savedOrder.getTotalAmount() + ".");
+
+        return mapToResponse(savedOrder);
     }
 
     public List<OrderResponse> getMyOrders(String userEmail) {
@@ -114,6 +123,16 @@ public class OrderService {
         order.setStatus(request.getStatus());
         Order savedOrder = orderRepository.save(order);
 
+        String type = switch (request.getStatus()) {
+            case CONFIRMED -> "ORDER_CONFIRMED";
+            case CANCELLED -> "ORDER_CANCELLED";
+            default -> "GENERAL";
+        };
+        notificationClient.send(savedOrder.getUserEmail(), savedOrder.getId(), type,
+                "Order " + savedOrder.getStatus().name().toLowerCase(),
+                "Your order #" + savedOrder.getId() + " is now "
+                        + savedOrder.getStatus().name() + ".");
+
         return mapToResponse(savedOrder);
     }
 
@@ -138,6 +157,10 @@ public class OrderService {
 
         order.setStatus(OrderStatus.CANCELLED);
         Order savedOrder = orderRepository.save(order);
+
+        notificationClient.send(savedOrder.getUserEmail(), savedOrder.getId(), "ORDER_CANCELLED",
+                "Order cancelled",
+                "Your order #" + savedOrder.getId() + " has been cancelled.");
 
         return mapToResponse(savedOrder);
     }

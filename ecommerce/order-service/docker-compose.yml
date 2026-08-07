@@ -35,8 +35,10 @@ services:
       DB_USERNAME: postgres
       DB_PASSWORD: postgres
       JWT_SECRET: mySuperSecretKeyForJwtTokenGeneration1234567890
-      # inventory-service runs in its own compose; reach it via the docker host.
+      # inventory- and notification-service run in their own compose files;
+      # reach them via the docker host.
       INVENTORY_SERVICE_URL: http://host.docker.internal:8084
+      NOTIFICATION_SERVICE_URL: http://host.docker.internal:8086
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
