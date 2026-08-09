@@ -1,44 +1,21 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// Dev proxy: the browser talks only to the Vite dev server (same origin),
-// which forwards each API prefix to the correct backend service.
-// This avoids CORS configuration on the services during development.
+// The frontend calls same-origin "/api/..." paths. In dev, Vite proxies ALL of
+// them to the API gateway (single entry point), which routes to each service.
+//
+// Set VITE_API_TARGET to override (e.g. a deployed gateway). If you're NOT
+// running the gateway, point this at an individual service, or restore the
+// per-service proxy rules (see the git history of this file).
+const API_TARGET = process.env.VITE_API_TARGET || "http://localhost:8080";
+
 export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
     proxy: {
-      "/api/auth": {
-        target: "http://localhost:8081", // user-service
-        changeOrigin: true,
-      },
-      "/api/users": {
-        target: "http://localhost:8081", // user-service
-        changeOrigin: true,
-      },
-      "/api/products": {
-        target: "http://localhost:8082", // product-service
-        changeOrigin: true,
-      },
-      "/api/categories": {
-        target: "http://localhost:8082", // product-service
-        changeOrigin: true,
-      },
-      "/api/cart": {
-        target: "http://localhost:8083", // cart-service
-        changeOrigin: true,
-      },
-      "/api/inventory": {
-        target: "http://localhost:8084", // inventory-service
-        changeOrigin: true,
-      },
-      "/api/orders": {
-        target: "http://localhost:8085", // order-service
-        changeOrigin: true,
-      },
-      "/api/notifications": {
-        target: "http://localhost:8086", // notification-service
+      "/api": {
+        target: API_TARGET, // api-gateway
         changeOrigin: true,
       },
     },

@@ -20,10 +20,12 @@ with search + category filter and live stock, **cart**, **checkout**, **order hi
 
 ## Prerequisites
 
-The frontend talks to the backend services through Vite's dev proxy. You need these services running for the full flow:
+The frontend talks to the backend through the **API gateway** (`:8080`) via Vite's dev
+proxy. You need the gateway plus these services running for the full flow:
 
 | Service         | Port | Used for                    |
 |-----------------|------|-----------------------------|
+| api-gateway     | 8080 | single entry point / routing|
 | user-service    | 8081 | login / register            |
 | product-service | 8082 | product listing             |
 | cart-service    | 8083 | cart (add / update / remove)|
@@ -79,17 +81,16 @@ http://localhost:5173
 ### API calls & CORS
 
 The browser only ever calls **same-origin** `/api/...` paths. Vite's dev server
-(`vite.config.js`) proxies each prefix to the correct backend service, so you do
-**not** need to configure CORS on the services during development:
+(`vite.config.js`) proxies **all** of them to the **API gateway** (`:8080`), which routes
+each prefix to the owning service. So the frontend depends on a single URL:
 
 ```text
-/api/auth      → http://localhost:8081   (user-service)
-/api/products  → http://localhost:8082   (product-service)
-/api/cart      → http://localhost:8083   (cart-service)
-/api/inventory → http://localhost:8084   (inventory-service)
-/api/orders    → http://localhost:8085   (order-service)
-/api/notifications → http://localhost:8086 (notification-service)
+/api/**  → http://localhost:8080  (api-gateway → user/product/cart/inventory/order/notification)
 ```
+
+Override the target with `VITE_API_TARGET` (e.g. a deployed gateway). If you'd rather run
+without the gateway, point `VITE_API_TARGET` at a single service or restore the
+per-service proxy rules from this file's git history.
 
 ### Authentication
 
@@ -200,4 +201,4 @@ Response: array of `{ id, name, description, brand, price, image_url, is_active,
 
 - Admin: edit/deactivate existing products, list all orders, update order status
 - Order detail page (`GET /api/orders/:id`)
-- Real API gateway in front of the services (replace the dev proxy)
+- Centralized JWT auth / rate limiting at the gateway
