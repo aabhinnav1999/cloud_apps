@@ -1,0 +1,222 @@
+name: ecommerce
+
+# One-command stack: databases + all microservices + gateway + frontend.
+# From this folder:  docker compose up --build
+# Then open:         http://localhost:3000
+#
+# Services talk to each other over the default compose network using their
+# service names as hostnames (e.g. http://order-service:8085).
+
+services:
+  # ---------------- Databases ----------------
+  user-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - userdb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d userdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  product-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: productdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - product_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d productdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  inventory-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: inventorydb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - inventory_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d inventorydb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  order-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: orderdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
+    volumes:
+      - order_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d orderdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cart-db:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - cart_redis_data:/data
+
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  # ---------------- Services ----------------
+  user-service:
+    build: ./user-service
+    depends_on:
+      user-db:
+        condition: service_healthy
+    environment:
+      DB_HOST: user-db
+      DB_PORT: 5432
+      DB_NAME: userdb
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: mySuperSecretKeyForJwtTokenGeneration1234567890
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+
+  product-service:
+    build: ./product-service
+    depends_on:
+      product-db:
+        condition: service_healthy
+    environment:
+      APP_NAME: product-service
+      APP_PORT: 8082
+      DB_HOST: product-db
+      DB_PORT: 5432
+      DB_NAME: productdb
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    ports:
+      - "8082:8082"
+    restart: unless-stopped
+
+  cart-service:
+    build: ./cart-service
+    depends_on:
+      - cart-db
+    environment:
+      PORT: 8083
+      NODE_ENV: production
+      JWT_SECRET: mySuperSecretKeyForJwtTokenGeneration1234567890
+      REDIS_HOST: cart-db
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+    ports:
+      - "8083:8083"
+    restart: unless-stopped
+
+  inventory-service:
+    build: ./inventory-service
+    depends_on:
+      inventory-db:
+        condition: service_healthy
+    environment:
+      DB_HOST: inventory-db
+      DB_PORT: 5432
+      DB_NAME: inventorydb
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+    ports:
+      - "8084:8084"
+    restart: unless-stopped
+
+  order-service:
+    build: ./order-service
+    depends_on:
+      order-db:
+        condition: service_healthy
+      inventory-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    environment:
+      DB_HOST: order-db
+      DB_PORT: 5432
+      DB_NAME: orderdb
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: mySuperSecretKeyForJwtTokenGeneration1234567890
+      INVENTORY_SERVICE_URL: http://inventory-service:8084
+      NOTIFICATION_SERVICE_URL: http://notification-service:8086
+    ports:
+      - "8085:8085"
+    restart: unless-stopped
+
+  notification-service:
+    build: ./notification-service
+    depends_on:
+      - mongodb
+    environment:
+      PORT: 8086
+      MONGO_URI: mongodb://mongodb:27017/notificationdb
+    ports:
+      - "8086:8086"
+    restart: unless-stopped
+
+  # ---------------- Gateway + Frontend ----------------
+  api-gateway:
+    build: ./api-gateway
+    depends_on:
+      - user-service
+      - product-service
+      - cart-service
+      - inventory-service
+      - order-service
+      - notification-service
+    environment:
+      USER_SERVICE_URL: http://user-service:8081
+      PRODUCT_SERVICE_URL: http://product-service:8082
+      CART_SERVICE_URL: http://cart-service:8083
+      INVENTORY_SERVICE_URL: http://inventory-service:8084
+      ORDER_SERVICE_URL: http://order-service:8085
+      NOTIFICATION_SERVICE_URL: http://notification-service:8086
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - api-gateway
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+
+volumes:
+  userdb_data:
+  product_db_data:
+  inventory_db_data:
+  order_db_data:
+  cart_redis_data:
+  mongodb_data:

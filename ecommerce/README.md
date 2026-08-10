@@ -61,20 +61,28 @@ Each folder has its own `README.md` with detailed setup and API docs.
 
 ## Running the whole stack
 
-Each service runs independently. Bring up the datastores + services (each folder has a
-`docker compose up`), then the gateway, then the frontend.
+### Option A — one command (recommended)
 
-Typical local order:
+The root `docker-compose.yml` builds and runs **everything**: all databases, the six
+services, the gateway, and the frontend (served by nginx). From this folder:
+
+```bash
+docker compose up --build
+```
+
+Then open **http://localhost:3000**.
+
+- First run builds all images (Maven/npm/pip downloads) and can take several minutes.
+- Stop with `Ctrl+C`; tear down with `docker compose down` (add `-v` to wipe data).
+- The frontend's nginx proxies `/api/**` to the gateway, which routes to each service.
+
+### Option B — run services individually
+
+Each folder also has its own `docker compose` (or run natively). Typical order:
 
 1. Start each backend service (see its README) — they listen on 8081–8086.
-2. Start the gateway:
-   ```bash
-   cd api-gateway && mvn spring-boot:run
-   ```
-3. Start the frontend:
-   ```bash
-   cd frontend && npm install && npm run dev
-   ```
+2. Start the gateway: `cd api-gateway && mvn spring-boot:run`
+3. Start the frontend (Vite dev server): `cd frontend && npm install && npm run dev`
 4. Open http://localhost:5173.
 
 ### First-run data
@@ -89,8 +97,8 @@ category, a product, and set its stock. (Promote a user with
 ## Ports at a glance
 
 ```text
-5173  frontend            8083  cart-service        8086  notification-service
+3000  frontend (compose)  8082  product-service     8085  order-service
+5173  frontend (dev)      8083  cart-service        8086  notification-service
 8080  api-gateway         8084  inventory-service
-8081  user-service        8085  order-service
-8082  product-service
+8081  user-service
 ```
