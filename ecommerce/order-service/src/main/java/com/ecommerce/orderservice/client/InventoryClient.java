@@ -3,6 +3,7 @@ package com.ecommerce.orderservice.client;
 import com.ecommerce.orderservice.exception.InventoryServiceException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -24,8 +25,12 @@ public class InventoryClient {
 
     private final RestClient restClient;
 
-    public InventoryClient(@Value("${inventory.base-url:http://localhost:8084}") String baseUrl) {
-        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
+    public InventoryClient(@Value("${inventory.base-url:http://localhost:8084}") String baseUrl,
+                           ClientHttpRequestFactory requestFactory) {
+        this.restClient = RestClient.builder()
+                .baseUrl(baseUrl)
+                .requestFactory(requestFactory)
+                .build();
     }
 
     public void reserve(Long productId, int quantity) {
