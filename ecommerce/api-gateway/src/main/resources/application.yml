@@ -11,8 +11,11 @@ spring:
       globalcors:
         cors-configurations:
           "[/**]":
-            allowedOrigins:
-              - "http://localhost:5173"
+            # Patterns (not allowedOrigins) so any host/port works — the Vite dev
+            # server, the nginx frontend on :3000, and the Pi's LAN IP. Required
+            # because "*" is illegal in allowedOrigins when allowCredentials is true.
+            allowedOriginPatterns:
+              - "*"
             allowedMethods:
               - GET
               - POST
