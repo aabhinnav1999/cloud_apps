@@ -1,0 +1,14 @@
+# In-cluster service URLs. Every name here resolves via Kubernetes DNS
+# (<service>.<namespace>.svc.cluster.local, shortened to <service> in-namespace).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-urls
+  namespace: ecommerce
+data:
+  USER_SERVICE_URL: http://user-service:8081
+  PRODUCT_SERVICE_URL: http://product-service:8082
+  CART_SERVICE_URL: http://cart-service:8083
+  INVENTORY_SERVICE_URL: http://inventory-service:8084
+  ORDER_SERVICE_URL: http://order-service:8085
+  NOTIFICATION_SERVICE_URL: http://notification-service:8086

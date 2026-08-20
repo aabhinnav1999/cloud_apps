@@ -1,0 +1,47 @@
+# AWS ALB Ingress — single host, path-based routing.
+#
+#   /api/*  -> api-gateway:8080   (which fans out to the six services)
+#   /*      -> frontend:80        (React SPA served by nginx)
+#
+# Same-origin, so no CORS is involved and one certificate covers everything.
+# Requires the AWS Load Balancer Controller installed in the cluster and
+# public subnets tagged kubernetes.io/role/elb=1.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ecommerce-ingress
+  namespace: ecommerce
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    # The gateway has no route for "/" and answers 404 there (it has no
+    # Actuator dependency). Accepting 200-404 keeps both target groups
+    # healthy; a genuinely down pod fails the check by refusing the
+    # connection. See the README for the cleaner Actuator alternative.
+    alb.ingress.kubernetes.io/success-codes: "200-404"
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "30"
+spec:
+  ingressClassName: alb
+  rules:
+    # To switch to host-based routing, add "host:" here and split the paths
+    # across two rules (see the README) — remember it makes the API
+    # cross-origin, so the gateway's CORS config then matters.
+    - http:
+        paths:
+          # Most specific first — /api must precede the catch-all.
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
