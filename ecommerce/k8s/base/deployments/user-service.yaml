@@ -17,10 +17,25 @@ spec:
         image: aabhinnavdocker/ecommerce-user-service:v1
         resources:
           limits:
-            memory: "128Mi"
+            memory: "1Gi"
             cpu: "500m"
           requests:
-            memory: "64Mi"
+            memory: "512Mi"
             cpu: "250m"
+        env:
+          - name: DB_HOST
+            value: user-db
+          - name: DB_PORT
+            value: "5432"
+          - name: DB_NAME
+            value: userdb
+          - name: DB_USERNAME
+            value: postgres
+          - name: DB_PASSWORD
+            value: postgres
+          - name: JWT_SECRET
+            value: mySuperSecretKeyForJwtTokenGeneration1234567890
+          - name: JAVA_TOOL_OPTIONS
+            value: "-XX:MaxRAMPercentage=75"
         ports:
         - containerPort: 8081
