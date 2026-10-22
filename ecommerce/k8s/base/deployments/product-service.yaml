@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-service
+  template:
+    metadata:
+      labels:
+        app: product-service
+    spec:
+      containers:
+      - name: product-service
+        image: aabhinnavdocker/ecommerce-product-service:v1
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+        env:
+          - name: DB_HOST
+            value: product-db
+          - name: DB_PORT
+            value: "5432"
+          - name: DB_NAME
+            value: productdb
+          - name: DB_USERNAME
+            value: postgres
+          - name: DB_PASSWORD
+            value: postgres
+        ports:
+        - containerPort: 8082
