@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: product-service
-        image: aabhinnavdocker/ecommerce-product-service:v1
+        image: aabhinnavdocker/ecommerce-product-service:v2
         resources:
           limits:
             memory: "512Mi"

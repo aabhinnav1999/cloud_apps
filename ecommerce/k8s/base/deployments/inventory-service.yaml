@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: inventory-service
-        image: aabhinnavdocker/ecommerce-inventory-service:v1
+        image: aabhinnavdocker/ecommerce-inventory-service:v2
         resources:
           limits:
             memory: "512Mi"
